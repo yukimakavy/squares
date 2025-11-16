@@ -27,7 +27,7 @@ function App() {
     <div className="h-full bg-gray-900 text-white">
       <div className="flex flex-col h-full">
         {/* Game area centered */}
-        <div className="flex-1 flex items-start md:items-center justify-center p-2 md:p-0 overflow-y-auto md:overflow-visible" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 flex items-start md:items-center justify-center p-2 md:p-4 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex flex-col gap-2 w-full md:w-auto max-w-full pb-4">
             {/* Currency at top left of game area */}
             <div className="self-start overflow-x-auto w-full">
