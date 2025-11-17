@@ -28,24 +28,19 @@ export default function MultiDisplay() {
   const luckRatio = expectedMultiplier > 0 ? totalMultiplier / expectedMultiplier : 1;
 
   // Determine luck indicator
-  // ↑↑ = 1.5x or more (significantly above expected)
-  // ↑  = 1.2x to 1.5x (above expected)
-  // (no indicator) = 0.8x to 1.2x (around expected)
-  // ↓  = 0.6x to 0.8x (below expected)
+  // ↑↑ = 1.4x or more (significantly above expected)
+  // ↑  = 1.0x to 1.4x (above expected)
+  // ↓  = 0.6x to 1.0x (below expected)
   // ↓↓ = below 0.6x (significantly below expected)
   let luckIndicator = '';
   let luckColor = '';
 
-  if (luckRatio >= 1.5) {
+  if (luckRatio >= 1.4) {
     luckIndicator = '↑↑';
     luckColor = 'text-green-400';
-  } else if (luckRatio >= 1.2) {
+  } else if (luckRatio >= 1.0) {
     luckIndicator = '↑';
     luckColor = 'text-green-400';
-  } else if (luckRatio >= 0.8) {
-    // No indicator for average luck
-    luckIndicator = '';
-    luckColor = '';
   } else if (luckRatio >= 0.6) {
     luckIndicator = '↓';
     luckColor = 'text-red-400';
