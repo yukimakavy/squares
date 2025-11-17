@@ -1,8 +1,8 @@
 import { create } from 'zustand';
-import type { GameState, LayerState, SquareState, UpgradeState, SpellState, SkillState } from '../types/game';
-import { GRID_SIZE, TOTAL_SQUARES, FILL_TIME, SPIN_DURATION, LAYER_TIME_MULTIPLIER } from '../types/game';
+import type { GameState, LayerState, SquareState, UpgradeState, SpellState, SkillState, ComboSquare, ComboColor, ComboType } from '../types/game';
+import { GRID_SIZE, TOTAL_SQUARES, FILL_TIME, SPIN_DURATION, LAYER_TIME_MULTIPLIER, COMBO_FILL_TIME, COMBO_SQUARE_COUNT, COMBO_COLORS, COMBO_PAYOUTS, COMBO_RESULT_DISPLAY_TIME } from '../types/game';
 import { getRandomSlotMultiplier } from '../utils/random';
-import { UPGRADES, PINK_UPGRADES, getUpgradeCost } from '../config/upgrades';
+import { UPGRADES, PINK_UPGRADES, COMBO_UPGRADES, getUpgradeCost } from '../config/upgrades';
 import { SPELLS, getSpellCost } from '../config/spells';
 import { SKILLS } from '../config/skills';
 import { loadGameState } from '../utils/storage';
@@ -39,6 +39,46 @@ const initializeLayer = (): LayerState => {
     completedRows: 0,
     rowBonuses: [],
   };
+};
+
+// Initialize combo squares
+const initializeComboSquares = (): ComboSquare[] => {
+  const squares: ComboSquare[] = [];
+  for (let i = 0; i < COMBO_SQUARE_COUNT; i++) {
+    squares.push({
+      index: i,
+      filled: false,
+      fillProgress: 0,
+      color: null,
+    });
+  }
+  return squares;
+};
+
+// Get a random combo color
+const getRandomComboColor = (): ComboColor => {
+  return COMBO_COLORS[Math.floor(Math.random() * COMBO_COLORS.length)];
+};
+
+// Calculate combo type from filled squares
+const calculateComboType = (squares: ComboSquare[]): ComboType => {
+  const colors = squares.map(s => s.color).filter(c => c !== null) as ComboColor[];
+  if (colors.length !== COMBO_SQUARE_COUNT) return 'nothing';
+
+  const colorCounts = colors.reduce((acc, color) => {
+    acc[color] = (acc[color] || 0) + 1;
+    return acc;
+  }, {} as Record<ComboColor, number>);
+
+  const counts = Object.values(colorCounts).sort((a, b) => b - a);
+
+  if (counts[0] === 5) return 'five_of_a_kind';
+  if (counts[0] === 4) return 'four_of_a_kind';
+  if (counts[0] === 3 && counts[1] === 2) return 'full_house';
+  if (counts[0] === 3) return 'three_of_a_kind';
+  if (counts[0] === 2 && counts[1] === 2) return 'two_pair';
+  if (counts[0] === 2) return 'one_pair';
+  return 'nothing';
 };
 
 // Calculate fill time for a specific square based on prestige level
@@ -88,7 +128,8 @@ interface GameActions {
   getPassiveGenerationRate: () => number;
 
   // UI
-  setTab: (tab: 'squares' | 'skills') => void;
+  setTab: (tab: 'squares' | 'skills' | 'combos') => void;
+  setHideMaxedUpgrades: (hide: boolean) => void;
 
   // Utilities
   reset: () => void;
@@ -102,6 +143,9 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
     currency: savedState.currency,
     mana: savedState.mana
   } : 'null');
+
+  // Check if combos should be unlocked based on upgrade purchase
+  const hasUnlockCombosUpgrade = savedState?.upgrades?.some(u => u.id === 'unlock_combos' && u.level > 0) ?? false;
 
   return {
     // Initial state
@@ -123,8 +167,16 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
     prestigeCurrencies: savedState?.prestigeCurrencies ?? [],
     currentTab: savedState?.currentTab ?? 'squares',
     skillsUnlocked: savedState?.skillsUnlocked ?? false,
+    combosUnlocked: savedState?.combosUnlocked ?? hasUnlockCombosUpgrade,
+    hideMaxedUpgrades: savedState?.hideMaxedUpgrades ?? true,
+    hasWon: savedState?.hasWon ?? false,
     lastBlueSquareProduction: savedState?.lastBlueSquareProduction ?? 0,
     skills: savedState?.skills ?? [],
+    comboPoints: savedState?.comboPoints ?? 0,
+    comboSquares: savedState?.comboSquares ?? initializeComboSquares(),
+    currentComboSquareIndex: savedState?.currentComboSquareIndex ?? 0,
+    currentComboSquareFillProgress: savedState?.currentComboSquareFillProgress ?? 0,
+    comboResultDisplay: savedState?.comboResultDisplay ?? null,
 
   // Game loop - updates square fill progress
   tick: () => {
@@ -184,6 +236,117 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
 
     const updatedPrestigeCurrencies = state.prestigeCurrencies;
 
+    // Combo filling logic (only when combos are unlocked)
+    let updatedComboSquares = [...state.comboSquares];
+    let updatedComboSquareIndex = state.currentComboSquareIndex;
+    let updatedComboSquareFillProgress = state.currentComboSquareFillProgress;
+    let updatedComboPoints = state.comboPoints;
+    let updatedComboResultDisplay = state.comboResultDisplay;
+
+    if (state.combosUnlocked) {
+      // Check if we're displaying results
+      if (updatedComboResultDisplay && updatedComboResultDisplay.active) {
+        // Check if result display time has ended
+        if (now >= updatedComboResultDisplay.endTime) {
+          // Clear result display and start new hand
+          updatedComboResultDisplay = null;
+          updatedComboSquares = initializeComboSquares();
+          updatedComboSquareIndex = 0;
+          updatedComboSquareFillProgress = 0;
+        }
+      } else if (updatedComboSquareIndex < COMBO_SQUARE_COUNT) {
+        // Normal filling logic
+        const comboFillProgress = deltaTime / COMBO_FILL_TIME;
+        updatedComboSquareFillProgress += comboFillProgress;
+
+        // Assign color to current square if it doesn't have one yet
+        if (updatedComboSquareIndex < COMBO_SQUARE_COUNT && !updatedComboSquares[updatedComboSquareIndex].color) {
+          const color = getRandomComboColor();
+          updatedComboSquares[updatedComboSquareIndex] = {
+            ...updatedComboSquares[updatedComboSquareIndex],
+            color: color,
+          };
+        }
+
+        // Update the current combo square's fill progress
+        if (updatedComboSquareIndex < COMBO_SQUARE_COUNT) {
+          updatedComboSquares[updatedComboSquareIndex] = {
+            ...updatedComboSquares[updatedComboSquareIndex],
+            fillProgress: Math.min(updatedComboSquareFillProgress, 1),
+          };
+        }
+
+        // Check if current square is filled
+        while (updatedComboSquareFillProgress >= 1 && updatedComboSquareIndex < COMBO_SQUARE_COUNT) {
+          // Mark square as filled (color already assigned above)
+          updatedComboSquares[updatedComboSquareIndex] = {
+            ...updatedComboSquares[updatedComboSquareIndex],
+            filled: true,
+            fillProgress: 1,
+          };
+
+          updatedComboSquareFillProgress -= 1;
+          updatedComboSquareIndex++;
+
+          // Assign color to next square and update its progress if within bounds
+          if (updatedComboSquareIndex < COMBO_SQUARE_COUNT) {
+            const nextColor = getRandomComboColor();
+            updatedComboSquares[updatedComboSquareIndex] = {
+              ...updatedComboSquares[updatedComboSquareIndex],
+              fillProgress: updatedComboSquareFillProgress,
+              color: nextColor,
+            };
+          }
+        }
+
+        // Check if all combo squares are filled
+        if (updatedComboSquareIndex >= COMBO_SQUARE_COUNT && updatedComboSquares.every(s => s.filled)) {
+          // Calculate combo type and award points
+          const comboType = calculateComboType(updatedComboSquares);
+          const payout = COMBO_PAYOUTS.find(p => p.type === comboType);
+          if (payout) {
+            let points = payout.points;
+
+            // Apply combo upgrades
+            // 1. More combo points (20% per level compounding)
+            const moreComboPointsLevel = get().getUpgradeLevel('more_combo_points');
+            if (moreComboPointsLevel > 0) {
+              const upgrade = COMBO_UPGRADES.find(u => u.id === 'more_combo_points');
+              if (upgrade) {
+                points *= upgrade.getEffect(moreComboPointsLevel);
+              }
+            }
+
+            // 2. Lucky blue (2x per blue card)
+            if (get().getUpgradeLevel('lucky_blue') > 0) {
+              const blueCount = updatedComboSquares.filter(s => s.color === 'blue').length;
+              if (blueCount > 0) {
+                points *= Math.pow(2, blueCount);
+              }
+            }
+
+            // 3. Crazy pink (100x if 3+ pink cards)
+            if (get().getUpgradeLevel('crazy_pink') > 0) {
+              const pinkCount = updatedComboSquares.filter(s => s.color === 'pink').length;
+              if (pinkCount >= 3) {
+                points *= 100;
+              }
+            }
+
+            updatedComboPoints += points;
+
+            // Show result display for 1.5 seconds
+            updatedComboResultDisplay = {
+              active: true,
+              comboType: comboType,
+              points: points,
+              endTime: now + COMBO_RESULT_DISPLAY_TIME,
+            };
+          }
+        }
+      }
+    }
+
     // Check if layer is complete
     if (layer.currentSquareIndex >= TOTAL_SQUARES) {
       set({
@@ -192,6 +355,11 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
         currency: state.currency + passiveCurrency,
         prestigeCurrencies: updatedPrestigeCurrencies,
         unlockedUpgrades: newlyUnlockedUpgrades,
+        comboPoints: updatedComboPoints,
+        comboSquares: updatedComboSquares,
+        currentComboSquareIndex: updatedComboSquareIndex,
+        currentComboSquareFillProgress: updatedComboSquareFillProgress,
+        comboResultDisplay: updatedComboResultDisplay,
       });
       return;
     }
@@ -309,6 +477,11 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
             lastUpdate: now,
             prestigeCurrencies: updatedPrestigeCurrencies,
             unlockedUpgrades: newlyUnlockedUpgrades,
+            comboPoints: updatedComboPoints,
+            comboSquares: updatedComboSquares,
+            currentComboSquareIndex: updatedComboSquareIndex,
+            currentComboSquareFillProgress: updatedComboSquareFillProgress,
+            comboResultDisplay: updatedComboResultDisplay,
           });
 
           // Now call prestige() which will read the updated layer state
@@ -344,6 +517,11 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
       lastUpdate: now,
       prestigeCurrencies: updatedPrestigeCurrencies,
       unlockedUpgrades: newlyUnlockedUpgrades,
+      comboPoints: updatedComboPoints,
+      comboSquares: updatedComboSquares,
+      currentComboSquareIndex: updatedComboSquareIndex,
+      currentComboSquareFillProgress: updatedComboSquareFillProgress,
+      comboResultDisplay: updatedComboResultDisplay,
     });
   },
 
@@ -402,12 +580,16 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
     newLayer.totalSquares = 1;
     newLayer.currentSquareIndex = 1;
 
+    // Check if player has won (completed pink grid, prestigeLevel 1 -> 2)
+    const hasWon = state.prestigeLevel === 1;
+
     // Increment prestige level and save the previous layer
     set({
       layer: newLayer,
       prestigeLevel: state.prestigeLevel + 1,
       previousCompletedLayer: completedLayer,
       lastBlueSquareProduction: blueSquareProduction > 0 ? blueSquareProduction : state.lastBlueSquareProduction,
+      hasWon: hasWon || state.hasWon, // Once won, always won
     });
   },
 
@@ -490,22 +672,19 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
           lastBlueSquareProduction: reward, // Remember this for passive generation
           lastUpdate: Date.now(),
         };
-      } else {
-        // Prestige 1+: currency goes to prestige-specific currency, reset back to prestige 0
+      } else if (state.prestigeLevel === 1) {
+        // Prestige 1 (pink): currency goes to prestige-specific currency, reset back to prestige 0
         const updatedPrestigeCurrencies = [...state.prestigeCurrencies];
-        const currencyIndex = state.prestigeLevel - 1;
+        const currencyIndex = 0; // Pink is at index 0
 
-        // Apply pink multiplier for prestige 1 (index 0)
-        let finalReward = reward;
-        if (currencyIndex === 0) {
-          const pinkMultiplier = get().getPinkMultiplier();
-          finalReward = reward * pinkMultiplier;
-        }
+        // Apply pink multiplier
+        const pinkMultiplier = get().getPinkMultiplier();
+        const finalReward = reward * pinkMultiplier;
 
         updatedPrestigeCurrencies[currencyIndex] = (updatedPrestigeCurrencies[currencyIndex] || 0) + finalReward;
 
         // Unlock skills tab if collecting pink squares for the first time
-        const unlockSkills = currencyIndex === 0 && !state.skillsUnlocked;
+        const unlockSkills = !state.skillsUnlocked;
 
         // Only reset blue upgrades (keep pink upgrades)
         const upgradesToKeep = state.upgrades.filter(upgrade => {
@@ -526,14 +705,35 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
           lastBlueSquareProduction: 0, // Clear stored production on full reset
           lastUpdate: Date.now(),
         };
+      } else {
+        // Prestige 2+ (green and beyond): Acts like pink collection but gives nothing
+        // Only reset blue upgrades (keep pink upgrades)
+        const upgradesToKeep = state.upgrades.filter(upgrade => {
+          const config = PINK_UPGRADES.find(u => u.id === upgrade.id);
+          return config !== undefined; // Keep if it's a pink upgrade
+        });
+
+        return {
+          hasCollected: true,
+          layer: initializeLayer(),
+          prestigeLevel: 0, // Reset back to prestige 0 (blue squares)
+          currency: 0, // Reset blue squares to 0
+          mana: 0, // Reset mana to 0
+          upgrades: upgradesToKeep, // Keep pink upgrades, reset blue upgrades
+          spells: [], // Reset all spells
+          lastBlueSquareProduction: 0, // Clear stored production on full reset
+          lastUpdate: Date.now(),
+        };
       }
     });
   },
 
   purchaseUpgrade: (upgradeId: string) => {
     const state = get();
-    // Check both UPGRADES and PINK_UPGRADES arrays
-    const upgradeConfig = UPGRADES.find(u => u.id === upgradeId) || PINK_UPGRADES.find(u => u.id === upgradeId);
+    // Check UPGRADES, PINK_UPGRADES, and COMBO_UPGRADES arrays
+    const upgradeConfig = UPGRADES.find(u => u.id === upgradeId) ||
+                          PINK_UPGRADES.find(u => u.id === upgradeId) ||
+                          COMBO_UPGRADES.find(u => u.id === upgradeId);
 
     if (!upgradeConfig) return;
 
@@ -541,8 +741,11 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
     const cost = getUpgradeCost(upgradeConfig, currentLevel);
 
     // Check which currency to use
-    const isPinkCurrency = upgradeConfig.costCurrency === 'pink';
-    const availableCurrency = isPinkCurrency ? (state.prestigeCurrencies[0] || 0) : state.currency;
+    const currencyType = upgradeConfig.costCurrency || 'blue';
+    const availableCurrency =
+      currencyType === 'pink' ? (state.prestigeCurrencies[0] || 0) :
+      currencyType === 'combo' ? state.comboPoints :
+      state.currency;
 
     // Check if can afford
     if (availableCurrency < cost) return;
@@ -564,18 +767,28 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
       newUpgrades = [...state.upgrades, { id: upgradeId, level: 1 }];
     }
 
+    // Check if this unlocks combos
+    const unlockCombos = upgradeId === 'unlock_combos' && !state.combosUnlocked;
+
     // Deduct from the appropriate currency
-    if (isPinkCurrency) {
+    if (currencyType === 'pink') {
       const updatedPrestigeCurrencies = [...state.prestigeCurrencies];
       updatedPrestigeCurrencies[0] = (updatedPrestigeCurrencies[0] || 0) - cost;
       set({
         prestigeCurrencies: updatedPrestigeCurrencies,
+        upgrades: newUpgrades,
+        combosUnlocked: unlockCombos ? true : state.combosUnlocked,
+      });
+    } else if (currencyType === 'combo') {
+      set({
+        comboPoints: state.comboPoints - cost,
         upgrades: newUpgrades,
       });
     } else {
       set({
         currency: state.currency - cost,
         upgrades: newUpgrades,
+        combosUnlocked: unlockCombos ? true : state.combosUnlocked,
       });
     }
   },
@@ -602,6 +815,13 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
       multiplier *= fillRateUpgrade.getEffect(fillRateLevel);
     }
 
+    // Apply faster_combo_fill upgrade from combo upgrades
+    const fasterComboFillLevel = get().getUpgradeLevel('faster_combo_fill');
+    const fasterComboFillUpgrade = COMBO_UPGRADES.find(u => u.id === 'faster_combo_fill');
+    if (fasterComboFillUpgrade && fasterComboFillLevel > 0) {
+      multiplier *= fasterComboFillUpgrade.getEffect(fasterComboFillLevel);
+    }
+
     return multiplier;
   },
 
@@ -620,6 +840,13 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
     const manaBoostUpgrade = PINK_UPGRADES.find(u => u.id === 'mana_boost');
     if (manaBoostUpgrade && manaBoostLevel > 0) {
       multiplier *= manaBoostUpgrade.getEffect(manaBoostLevel);
+    }
+
+    // Apply faster_combo_mana upgrade from combo upgrades
+    const fasterComboManaLevel = get().getUpgradeLevel('faster_combo_mana');
+    const fasterComboManaUpgrade = COMBO_UPGRADES.find(u => u.id === 'faster_combo_mana');
+    if (fasterComboManaUpgrade && fasterComboManaLevel > 0) {
+      multiplier *= fasterComboManaUpgrade.getEffect(fasterComboManaLevel);
     }
 
     return baseRate * multiplier;
@@ -782,8 +1009,12 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
     return 0;
   },
 
-  setTab: (tab: 'squares' | 'skills') => {
+  setTab: (tab: 'squares' | 'skills' | 'combos') => {
     set({ currentTab: tab });
+  },
+
+  setHideMaxedUpgrades: (hide: boolean) => {
+    set({ hideMaxedUpgrades: hide });
   },
 
   reset: () => {
@@ -802,6 +1033,8 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
       prestigeCurrencies: [],
       currentTab: 'squares',
       skillsUnlocked: false,
+      combosUnlocked: false,
+      hideMaxedUpgrades: false,
       lastBlueSquareProduction: 0,
       skills: [],
     });

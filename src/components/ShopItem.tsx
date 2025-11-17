@@ -10,6 +10,7 @@ interface ShopItemProps {
 export default function ShopItem({ upgrade }: ShopItemProps) {
   const currency = useGameStore((state) => state.currency);
   const prestigeCurrencies = useGameStore((state) => state.prestigeCurrencies);
+  const comboPoints = useGameStore((state) => state.comboPoints);
   const unlockedUpgrades = useGameStore((state) => state.unlockedUpgrades);
   const getUpgradeLevel = useGameStore((state) => state.getUpgradeLevel);
   const purchaseUpgrade = useGameStore((state) => state.purchaseUpgrade);
@@ -18,8 +19,11 @@ export default function ShopItem({ upgrade }: ShopItemProps) {
   const cost = getUpgradeCost(upgrade, currentLevel);
 
   // Determine which currency to check based on costCurrency field
-  const isPinkCurrency = upgrade.costCurrency === 'pink';
-  const availableCurrency = isPinkCurrency ? (prestigeCurrencies[0] || 0) : currency;
+  const currencyType = upgrade.costCurrency || 'blue';
+  const availableCurrency =
+    currencyType === 'pink' ? (prestigeCurrencies[0] || 0) :
+    currencyType === 'combo' ? comboPoints :
+    currency;
   const canAfford = availableCurrency >= cost;
   const isMaxLevel = upgrade.maxLevel !== undefined && currentLevel >= upgrade.maxLevel;
 
@@ -40,6 +44,21 @@ export default function ShopItem({ upgrade }: ShopItemProps) {
           <div className="flex-1">
             <h3 className="text-sm font-bold text-gray-500">???</h3>
             <p className="text-xs text-gray-500">{upgrade.unlockRequirement!.displayText}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show locked state for combo upgrades that can't be afforded
+  if (currencyType === 'combo' && !canAfford && currentLevel === 0) {
+    return (
+      <div className="bg-gray-700 rounded p-2">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="text-xl">🔒</div>
+          <div className="flex-1">
+            <h3 className="text-sm font-bold text-gray-500">???</h3>
+            <p className="text-xs text-gray-500">Need {formatMultiplier(cost)} 🎯</p>
           </div>
         </div>
       </div>
@@ -74,12 +93,14 @@ export default function ShopItem({ upgrade }: ShopItemProps) {
             ? 'bg-gray-600 text-gray-500 cursor-not-allowed'
             : !canAfford
             ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-            : isPinkCurrency
+            : currencyType === 'pink'
             ? 'bg-pink-600 hover:bg-pink-700 text-white'
+            : currencyType === 'combo'
+            ? 'bg-purple-600 hover:bg-purple-700 text-white'
             : 'bg-blue-600 hover:bg-blue-700 text-white'
         }`}
       >
-        {isMaxLevel ? 'Max Level' : `Buy - ${formatMultiplier(cost)}${isPinkCurrency ? ' 💗' : ''}`}
+        {isMaxLevel ? 'Max Level' : `Buy - ${formatMultiplier(cost)}${currencyType === 'pink' ? ' 💗' : currencyType === 'combo' ? ' 🎯' : ''}`}
       </button>
     </div>
   );

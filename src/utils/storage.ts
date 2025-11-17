@@ -17,8 +17,15 @@ export function saveGameState(state: Partial<GameState>): void {
       prestigeCurrencies: state.prestigeCurrencies,
       currentTab: state.currentTab,
       skillsUnlocked: state.skillsUnlocked,
+      hasWon: state.hasWon,
       lastBlueSquareProduction: state.lastBlueSquareProduction,
       skills: state.skills,
+      combosUnlocked: state.combosUnlocked,
+      comboPoints: state.comboPoints,
+      comboSquares: state.comboSquares,
+      currentComboSquareIndex: state.currentComboSquareIndex,
+      currentComboSquareFillProgress: state.currentComboSquareFillProgress,
+      comboResultDisplay: state.comboResultDisplay,
       timestamp: Date.now(),
     };
     localStorage.setItem(SAVE_KEY, JSON.stringify(saveData));
@@ -28,6 +35,7 @@ export function saveGameState(state: Partial<GameState>): void {
       mana: state.mana,
       upgrades: state.upgrades,
       spells: state.spells,
+      comboPoints: state.comboPoints,
       timestamp: new Date().toLocaleTimeString()
     });
   } catch (error) {
@@ -104,10 +112,17 @@ export function loadGameState(): Partial<GameState> | null {
       prestigeCurrencies: migratedPrestigeCurrencies,
       currentTab: data.currentTab ?? 'squares',
       skillsUnlocked: data.skillsUnlocked ?? false,
+      hasWon: data.hasWon,
       lastBlueSquareProduction: data.lastBlueSquareProduction ?? 0,
       skills: migratedSkills,
+      combosUnlocked: data.combosUnlocked,
+      comboPoints: data.comboPoints,
+      comboSquares: data.comboSquares,
+      currentComboSquareIndex: data.currentComboSquareIndex,
+      currentComboSquareFillProgress: data.currentComboSquareFillProgress,
+      comboResultDisplay: data.comboResultDisplay,
     };
-    console.log('[loadGameState] Returning data - prestigeLevel:', result.prestigeLevel, 'currency:', result.currency);
+    console.log('[loadGameState] Returning data - prestigeLevel:', result.prestigeLevel, 'currency:', result.currency, 'comboPoints:', result.comboPoints);
     return result;
   } catch (error) {
     console.error('Failed to load game state:', error);

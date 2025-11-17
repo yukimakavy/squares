@@ -30,14 +30,29 @@ export interface GameState {
   prestigeCurrencies: number[]; // Index 0 = first prestige currency, etc.
 
   // UI state
-  currentTab: 'squares' | 'skills'; // Current active tab
+  currentTab: 'squares' | 'skills' | 'combos'; // Current active tab
   skillsUnlocked: boolean; // Whether the Skills tab has been unlocked (ever had pink squares)
+  combosUnlocked: boolean; // Whether the Combos tab has been unlocked (purchased unlock_combos upgrade)
+  hideMaxedUpgrades: boolean; // Whether to hide maxed upgrades in the shop
+  hasWon: boolean; // Whether the player has completed the pink grid (prestigeLevel >= 2)
 
   // Passive generation state
   lastBlueSquareProduction: number; // The blue square collection amount from current run, used for passive generation during pink grid
 
   // Skills
   skills: SkillState[];
+
+  // Combos
+  comboPoints: number; // Total combo points earned
+  comboSquares: ComboSquare[]; // The 5 combo squares
+  currentComboSquareIndex: number; // Which square is currently filling (0-4)
+  currentComboSquareFillProgress: number; // Fill progress of current square (0-1)
+  comboResultDisplay: { // Result display for 1.5 seconds after hand completes
+    active: boolean;
+    comboType: ComboType;
+    points: number;
+    endTime: number; // Timestamp when result display should end
+  } | null;
 }
 
 export interface LayerState {
@@ -119,7 +134,7 @@ export interface UpgradeConfig {
   baseCost: number;
   costMultiplier: number; // Cost multiplier per level
   maxLevel?: number;
-  costCurrency?: 'blue' | 'pink'; // Currency type (defaults to 'blue' if not specified)
+  costCurrency?: 'blue' | 'pink' | 'combo'; // Currency type (defaults to 'blue' if not specified)
   getEffect: (level: number) => number; // Calculate effect for given level
   formatEffect: (level: number) => string; // Format effect for display
   unlockRequirement?: {
@@ -147,3 +162,36 @@ export interface SkillConfig {
     value?: number; // For passive_generation (% per second), mana_multiplier (multiplier), fill_speed_multiplier (multiplier)
   };
 }
+
+// Combos
+export type ComboColor = 'blue' | 'pink' | 'green' | 'orange' | 'white';
+
+export interface ComboSquare {
+  index: number; // 0-4
+  filled: boolean;
+  fillProgress: number; // 0 to 1
+  color: ComboColor | null; // null until filled
+}
+
+export type ComboType = 'five_of_a_kind' | 'four_of_a_kind' | 'full_house' | 'three_of_a_kind' | 'two_pair' | 'one_pair' | 'nothing';
+
+export interface ComboPayoutConfig {
+  type: ComboType;
+  name: string;
+  points: number;
+}
+
+export const COMBO_PAYOUTS: ComboPayoutConfig[] = [
+  { type: 'five_of_a_kind', name: 'Five of a Kind', points: 1500 },
+  { type: 'four_of_a_kind', name: 'Four of a Kind', points: 200 },
+  { type: 'full_house', name: 'Full House', points: 40 },
+  { type: 'three_of_a_kind', name: 'Three of a Kind', points: 20 },
+  { type: 'two_pair', name: 'Two Pair', points: 8 },
+  { type: 'one_pair', name: 'One Pair', points: 4 },
+  { type: 'nothing', name: 'Nothing', points: 1 },
+];
+
+export const COMBO_COLORS: ComboColor[] = ['blue', 'pink', 'green', 'orange', 'white'];
+export const COMBO_FILL_TIME = 600; // 0.6 seconds per square
+export const COMBO_SQUARE_COUNT = 5;
+export const COMBO_RESULT_DISPLAY_TIME = 1500; // 1.5 seconds to display result

@@ -4,10 +4,12 @@ import CollectButton from './components/CollectButton';
 import MultiDisplay from './components/MultiDisplay';
 import Shop from './components/Shop';
 import Spells from './components/Spells';
+import Combos from './components/Combos';
 import ResetButton from './components/ResetButton';
 import ExportButton from './components/ExportButton';
 import ImportButton from './components/ImportButton';
 import ChangelogButton from './components/ChangelogButton';
+import WinMessage from './components/WinMessage';
 import { useGameLoop } from './hooks/useGameLoop';
 import { useAutosave } from './hooks/useAutosave';
 import useGameStore from './stores/gameStore';
@@ -15,6 +17,9 @@ import useGameStore from './stores/gameStore';
 function App() {
   const hasCollected = useGameStore((state) => state.hasCollected);
   const hasManaGem = useGameStore((state) => state.getUpgradeLevel('mana_gem')) > 0;
+  const currentTab = useGameStore((state) => state.currentTab);
+  const combosUnlocked = useGameStore((state) => state.combosUnlocked);
+  const setTab = useGameStore((state) => state.setTab);
 
   // Initialize game loop and autosave
   useGameLoop();
@@ -31,7 +36,32 @@ function App() {
               <CurrencyDisplay />
             </div>
 
+            {/* Master tabs */}
+            {combosUnlocked && (
+              <div className="flex gap-2 mb-2 justify-center">
+                <button
+                  onClick={() => setTab('squares')}
+                  className={`px-4 py-2 rounded transition-all ${
+                    currentTab === 'squares' || currentTab === 'skills' ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  Main Game
+                </button>
+                <button
+                  onClick={() => setTab('combos')}
+                  className={`px-4 py-2 rounded transition-all ${
+                    currentTab === 'combos' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                >
+                  Combos
+                </button>
+              </div>
+            )}
+
             {/* Game content */}
+            {currentTab === 'combos' ? (
+              <Combos />
+            ) : (
             <>
               {/* Desktop layout */}
               <div
@@ -102,6 +132,7 @@ function App() {
                 {hasCollected && <Shop />}
               </div>
             </>
+            )}
 
             {/* Save controls - inline at bottom on mobile, floating on desktop */}
             <div className="flex gap-2 justify-center md:hidden mt-4">
@@ -123,6 +154,9 @@ function App() {
           <ResetButton />
         </div>
       </div>
+
+      {/* Win message overlay */}
+      <WinMessage />
     </div>
   );
 }

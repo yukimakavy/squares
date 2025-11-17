@@ -130,6 +130,99 @@ export const PINK_UPGRADES: UpgradeConfig[] = [
       return `${multipliers[level]}x fill rate`;
     },
   },
+  {
+    id: 'unlock_combos',
+    name: '🎯 Unlock Combos',
+    description: 'Unlocks the Combos mechanic',
+    baseCost: 1000000,
+    costMultiplier: 1,
+    maxLevel: 1,
+    costCurrency: 'pink',
+    unlockRequirement: {
+      type: 'prestige_currency',
+      currencyIndex: 0,
+      amount: 1000000,
+      displayText: 'Get 1M pink squares to unlock',
+    },
+    getEffect: () => 0,
+    formatEffect: () => 'Unlocks Combos tab',
+  },
+];
+
+// Combo upgrades (use combo points as currency)
+export const COMBO_UPGRADES: UpgradeConfig[] = [
+  {
+    id: 'more_combo_points',
+    name: '🎯 More Points',
+    description: '+20% per level',
+    baseCost: 200,
+    costMultiplier: 1.25,
+    maxLevel: 50,
+    costCurrency: 'combo',
+    getEffect: (level: number) => {
+      // 20% increase per level, compounding: 1.2^level
+      return Math.pow(1.2, level);
+    },
+    formatEffect: (level: number) => {
+      const multiplier = Math.pow(1.2, level);
+      const increase = ((multiplier - 1) * 100).toFixed(0);
+      return `+${increase}% points`;
+    },
+  },
+  {
+    id: 'lucky_blue',
+    name: '💙 Lucky Blue',
+    description: '2x per blue card',
+    baseCost: 10000,
+    costMultiplier: 1,
+    maxLevel: 1,
+    costCurrency: 'combo',
+    getEffect: () => 2, // 2x per blue card
+    formatEffect: () => '2x per blue card',
+  },
+  {
+    id: 'crazy_pink',
+    name: '💗 Crazy Pink',
+    description: '100x with 3+ pinks',
+    baseCost: 50000,
+    costMultiplier: 1,
+    maxLevel: 1,
+    costCurrency: 'combo',
+    getEffect: () => 100,
+    formatEffect: () => '100x with 3+ pink',
+  },
+  {
+    id: 'faster_combo_fill',
+    name: '⚡ Faster Fill',
+    description: '2x fill rate per level',
+    baseCost: 100000,
+    costMultiplier: 1.5,
+    maxLevel: 10,
+    costCurrency: 'combo',
+    getEffect: (level: number) => {
+      return Math.pow(2, level);
+    },
+    formatEffect: (level: number) => {
+      const multiplier = Math.pow(2, level);
+      return `${multiplier}x fill rate`;
+    },
+  },
+  {
+    id: 'faster_combo_mana',
+    name: '🔮 Faster Mana',
+    description: '2x mana regen per level',
+    baseCost: 100000,
+    costMultiplier: 1.5,
+    maxLevel: 10,
+    costCurrency: 'combo',
+    getEffect: (level: number) => {
+      return Math.pow(2, level);
+    },
+    formatEffect: (level: number) => {
+      const multiplier = Math.pow(2, level);
+      return `${multiplier}x mana regen`;
+    },
+  },
 ];
 
 export function getUpgradeCost(upgrade: UpgradeConfig, currentLevel: number): number {
