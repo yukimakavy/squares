@@ -25,7 +25,7 @@ export default function Grid() {
   }, [squares]);
 
   return (
-    <div className="inline-block relative scale-[0.75] md:scale-100 origin-top px-2 md:h-[428px]">
+    <div className="relative w-full md:w-auto md:inline-block">
       {/* Layer transition animation */}
       <LayerTransition />
 
@@ -35,13 +35,13 @@ export default function Grid() {
           Loading layer...
         </div>
       ) : (
-        <div className="flex gap-2" style={{ height: '428px' }}>
+        <div className="flex gap-2 w-full md:w-auto" style={{ height: '428px' }}>
           {/* Grid with rows */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 flex-1 md:flex-initial">
             {rows.map(({ rowSquares, rowNumber }) => (
               <div key={rowNumber} className="flex gap-1">
                 {rowSquares.map((square) => (
-                  <div key={square.index} className="w-8 h-8">
+                  <div key={square.index} className="w-8 h-8 flex-shrink-0">
                     <Square square={square} layer={prestigeLevel} />
                   </div>
                 ))}
@@ -50,7 +50,7 @@ export default function Grid() {
           </div>
 
           {/* Slot machines column */}
-          <div className="flex flex-col gap-1 w-20">
+          <div className="flex flex-col gap-1 w-20 flex-shrink-0">
             {rows.map(({ rowNumber }) => {
               const bonus = rowBonuses.find(b => b.row === rowNumber);
               return <RowSlot key={rowNumber} bonus={bonus || null} row={rowNumber} />;

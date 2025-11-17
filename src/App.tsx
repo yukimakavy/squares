@@ -25,10 +25,10 @@ function App() {
   useAutosave();
 
   return (
-    <div className="h-full bg-gray-900 text-white">
+    <div className="h-full bg-gray-900 text-white overflow-x-hidden">
       <div className="flex flex-col h-full">
         {/* Game area centered */}
-        <div className="flex-1 flex items-start md:items-center justify-center p-2 md:p-4 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex-1 flex items-start md:items-center justify-center p-2 md:p-4 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
           <div className="flex flex-col gap-2 w-full md:w-auto max-w-full pb-4">
             {/* Currency at top left of game area */}
             <div className="self-start overflow-x-auto w-full">
@@ -94,9 +94,7 @@ function App() {
                 <div className="md:hidden flex flex-col gap-3 w-full">
                   {hasManaGem && <Spells />}
 
-                  <div className="flex justify-center">
-                    <Grid />
-                  </div>
+                  <Grid />
 
                   <div className="flex gap-2 justify-center">
                     <CollectButton />
