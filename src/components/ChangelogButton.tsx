@@ -36,8 +36,9 @@ export default function ChangelogButton() {
                   <li>Moved skills to be a pink square shop</li>
                   <li>Skills now have a max level</li>
                   <li>Rebalanced pink grid</li>
-                  <li>Current endgame - ~1m pink squares. You can technically finish the pink grid if you are patient but there is content for filling the pink grid</li>
                   <li>Slightly improved mobile browser layout</li>
+                  <li>Current endgame: ~1m pink squares. You can technically finish the pink grid if you are patient but there is content for filling the pink grid</li>
+                  
                 </ul>
               </div>
 
