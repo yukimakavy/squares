@@ -9,13 +9,18 @@ interface ShopItemProps {
 
 export default function ShopItem({ upgrade }: ShopItemProps) {
   const currency = useGameStore((state) => state.currency);
+  const prestigeCurrencies = useGameStore((state) => state.prestigeCurrencies);
   const unlockedUpgrades = useGameStore((state) => state.unlockedUpgrades);
   const getUpgradeLevel = useGameStore((state) => state.getUpgradeLevel);
   const purchaseUpgrade = useGameStore((state) => state.purchaseUpgrade);
 
   const currentLevel = getUpgradeLevel(upgrade.id);
   const cost = getUpgradeCost(upgrade, currentLevel);
-  const canAfford = currency >= cost;
+
+  // Determine which currency to check based on costCurrency field
+  const isPinkCurrency = upgrade.costCurrency === 'pink';
+  const availableCurrency = isPinkCurrency ? (prestigeCurrencies[0] || 0) : currency;
+  const canAfford = availableCurrency >= cost;
   const isMaxLevel = upgrade.maxLevel !== undefined && currentLevel >= upgrade.maxLevel;
 
   // Check if upgrade is unlocked (permanently unlocked once requirements are met)
@@ -49,7 +54,9 @@ export default function ShopItem({ upgrade }: ShopItemProps) {
           <p className="text-xs text-gray-400">{upgrade.description}</p>
         </div>
         {currentLevel > 0 && (
-          <div className="text-xs font-bold text-blue-400 ml-2">Lv {currentLevel}</div>
+          <div className="text-xs font-bold text-blue-400 ml-2">
+            Lv {currentLevel}{upgrade.maxLevel !== undefined ? `/${upgrade.maxLevel}` : ''}
+          </div>
         )}
       </div>
 
@@ -67,10 +74,12 @@ export default function ShopItem({ upgrade }: ShopItemProps) {
             ? 'bg-gray-600 text-gray-500 cursor-not-allowed'
             : !canAfford
             ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+            : isPinkCurrency
+            ? 'bg-pink-600 hover:bg-pink-700 text-white'
             : 'bg-blue-600 hover:bg-blue-700 text-white'
         }`}
       >
-        {isMaxLevel ? 'Max Level' : `Buy - ${formatMultiplier(cost)}`}
+        {isMaxLevel ? 'Max Level' : `Buy - ${formatMultiplier(cost)}${isPinkCurrency ? ' 💗' : ''}`}
       </button>
     </div>
   );

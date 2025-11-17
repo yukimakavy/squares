@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import type { GameState, LayerState, SquareState, UpgradeState, SpellState, SkillState } from '../types/game';
 import { GRID_SIZE, TOTAL_SQUARES, FILL_TIME, SPIN_DURATION, LAYER_TIME_MULTIPLIER } from '../types/game';
 import { getRandomSlotMultiplier } from '../utils/random';
-import { UPGRADES, getUpgradeCost } from '../config/upgrades';
+import { UPGRADES, PINK_UPGRADES, getUpgradeCost } from '../config/upgrades';
 import { SPELLS, getSpellCost } from '../config/spells';
 import { SKILLS } from '../config/skills';
 import { loadGameState } from '../utils/storage';
@@ -139,9 +139,10 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
 
     const deltaTime = now - state.lastUpdate;
 
-    // Check for newly unlocked upgrades
+    // Check for newly unlocked upgrades (both blue and pink)
     const newlyUnlockedUpgrades = [...state.unlockedUpgrades];
-    UPGRADES.forEach(upgrade => {
+    const allUpgrades = [...UPGRADES, ...PINK_UPGRADES];
+    allUpgrades.forEach(upgrade => {
       if (!newlyUnlockedUpgrades.includes(upgrade.id) && upgrade.unlockRequirement) {
         const req = upgrade.unlockRequirement;
         let shouldUnlock = false;
@@ -290,14 +291,28 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
 
         // Check if we completed the entire grid - trigger prestige
         if (newSquareIndex === TOTAL_SQUARES) {
-          get().prestige();
-          // Don't continue updating the layer - prestige() already created a fresh one
+          // First, update the layer with the final row bonuses so prestige() can see them
+          const finalLayer = {
+            ...layer,
+            squares: updatedSquares,
+            currentSquareIndex: newSquareIndex,
+            currentSquareFillProgress: newFillProgress,
+            totalSquares: newTotalSquares,
+            completedRows: newCompletedRows,
+            rowBonuses: newRowBonuses,
+          };
+
           set({
+            layer: finalLayer,
             mana: state.mana + manaGained,
             currency: state.currency + passiveCurrency,
             lastUpdate: now,
             prestigeCurrencies: updatedPrestigeCurrencies,
+            unlockedUpgrades: newlyUnlockedUpgrades,
           });
+
+          // Now call prestige() which will read the updated layer state
+          get().prestige();
           return;
         }
       }
@@ -492,6 +507,12 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
         // Unlock skills tab if collecting pink squares for the first time
         const unlockSkills = currencyIndex === 0 && !state.skillsUnlocked;
 
+        // Only reset blue upgrades (keep pink upgrades)
+        const upgradesToKeep = state.upgrades.filter(upgrade => {
+          const config = PINK_UPGRADES.find(u => u.id === upgrade.id);
+          return config !== undefined; // Keep if it's a pink upgrade
+        });
+
         return {
           hasCollected: true,
           layer: initializeLayer(),
@@ -500,7 +521,7 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
           skillsUnlocked: unlockSkills ? true : state.skillsUnlocked,
           currency: 0, // Reset blue squares to 0
           mana: 0, // Reset mana to 0
-          upgrades: [], // Reset all upgrades
+          upgrades: upgradesToKeep, // Keep pink upgrades, reset blue upgrades
           spells: [], // Reset all spells
           lastBlueSquareProduction: 0, // Clear stored production on full reset
           lastUpdate: Date.now(),
@@ -511,15 +532,20 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
 
   purchaseUpgrade: (upgradeId: string) => {
     const state = get();
-    const upgradeConfig = UPGRADES.find(u => u.id === upgradeId);
+    // Check both UPGRADES and PINK_UPGRADES arrays
+    const upgradeConfig = UPGRADES.find(u => u.id === upgradeId) || PINK_UPGRADES.find(u => u.id === upgradeId);
 
     if (!upgradeConfig) return;
 
     const currentLevel = get().getUpgradeLevel(upgradeId);
     const cost = getUpgradeCost(upgradeConfig, currentLevel);
 
+    // Check which currency to use
+    const isPinkCurrency = upgradeConfig.costCurrency === 'pink';
+    const availableCurrency = isPinkCurrency ? (state.prestigeCurrencies[0] || 0) : state.currency;
+
     // Check if can afford
-    if (state.currency < cost) return;
+    if (availableCurrency < cost) return;
 
     // Check max level
     if (upgradeConfig.maxLevel && currentLevel >= upgradeConfig.maxLevel) return;
@@ -538,10 +564,20 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
       newUpgrades = [...state.upgrades, { id: upgradeId, level: 1 }];
     }
 
-    set({
-      currency: state.currency - cost,
-      upgrades: newUpgrades,
-    });
+    // Deduct from the appropriate currency
+    if (isPinkCurrency) {
+      const updatedPrestigeCurrencies = [...state.prestigeCurrencies];
+      updatedPrestigeCurrencies[0] = (updatedPrestigeCurrencies[0] || 0) - cost;
+      set({
+        prestigeCurrencies: updatedPrestigeCurrencies,
+        upgrades: newUpgrades,
+      });
+    } else {
+      set({
+        currency: state.currency - cost,
+        upgrades: newUpgrades,
+      });
+    }
   },
 
   getUpgradeLevel: (upgradeId: string) => {
@@ -559,16 +595,12 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
       multiplier *= upgrade.getEffect(fillFasterLevel);
     }
 
-    // Apply skill multipliers (compounding)
-    const state = get();
-    state.skills.forEach(skill => {
-      if (!skill.purchased) return;
-      const skillConfig = SKILLS.find(s => s.id === skill.id);
-      if (!skillConfig) return;
-      if (skillConfig.effect.type === 'fill_speed_multiplier' && skillConfig.effect.value) {
-        multiplier *= skillConfig.effect.value;
-      }
-    });
+    // Apply fill_rate upgrade from pink upgrades
+    const fillRateLevel = get().getUpgradeLevel('fill_rate');
+    const fillRateUpgrade = PINK_UPGRADES.find(u => u.id === 'fill_rate');
+    if (fillRateUpgrade && fillRateLevel > 0) {
+      multiplier *= fillRateUpgrade.getEffect(fillRateLevel);
+    }
 
     return multiplier;
   },
@@ -582,17 +614,13 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
       baseRate = upgrade.getEffect(manaGemLevel);
     }
 
-    // Apply skill multipliers (compounding)
+    // Apply mana_boost upgrade from pink upgrades
     let multiplier = 1;
-    const state = get();
-    state.skills.forEach(skill => {
-      if (!skill.purchased) return;
-      const skillConfig = SKILLS.find(s => s.id === skill.id);
-      if (!skillConfig) return;
-      if (skillConfig.effect.type === 'mana_multiplier' && skillConfig.effect.value) {
-        multiplier *= skillConfig.effect.value;
-      }
-    });
+    const manaBoostLevel = get().getUpgradeLevel('mana_boost');
+    const manaBoostUpgrade = PINK_UPGRADES.find(u => u.id === 'mana_boost');
+    if (manaBoostUpgrade && manaBoostLevel > 0) {
+      multiplier *= manaBoostUpgrade.getEffect(manaBoostLevel);
+    }
 
     return baseRate * multiplier;
   },
@@ -744,20 +772,14 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
   },
 
   getPassiveGenerationRate: () => {
-    const state = get();
-    let rate = 0;
+    const passiveGenLevel = get().getUpgradeLevel('passive_generation');
+    const passiveGenUpgrade = PINK_UPGRADES.find(u => u.id === 'passive_generation');
 
-    // Check all purchased skills
-    state.skills.forEach(skill => {
-      if (!skill.purchased) return;
-      const skillConfig = SKILLS.find(s => s.id === skill.id);
-      if (!skillConfig) return;
-      if (skillConfig.effect.type === 'passive_generation' && skillConfig.effect.value !== undefined) {
-        rate += skillConfig.effect.value;
-      }
-    });
+    if (passiveGenUpgrade && passiveGenLevel > 0) {
+      return passiveGenUpgrade.getEffect(passiveGenLevel);
+    }
 
-    return rate;
+    return 0;
   },
 
   setTab: (tab: 'squares' | 'skills') => {

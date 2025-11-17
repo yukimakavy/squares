@@ -8,23 +8,23 @@ export default function TabSelector() {
     <div className="flex gap-2 mb-4">
       <button
         onClick={() => setTab('squares')}
-        className={`px-4 py-2 rounded font-semibold transition-all ${
-          currentTab === 'squares'
-            ? 'bg-blue-600 text-white'
-            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-        }`}
+        className="w-12 h-12 rounded flex items-center justify-center transition-all bg-gray-700 hover:bg-gray-600"
       >
-        Squares
+        <div
+          className={`rounded bg-gradient-to-br from-blue-500 to-blue-600 transition-all ${
+            currentTab === 'squares' ? 'w-8 h-8' : 'w-6 h-6'
+          }`}
+        ></div>
       </button>
       <button
         onClick={() => setTab('skills')}
-        className={`px-4 py-2 rounded font-semibold transition-all ${
-          currentTab === 'skills'
-            ? 'bg-pink-600 text-white'
-            : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-        }`}
+        className="w-12 h-12 rounded flex items-center justify-center transition-all bg-gray-700 hover:bg-gray-600"
       >
-        Skills
+        <div
+          className={`rounded bg-gradient-to-br from-pink-500 to-pink-600 transition-all ${
+            currentTab === 'skills' ? 'w-8 h-8' : 'w-6 h-6'
+          }`}
+        ></div>
       </button>
     </div>
   );

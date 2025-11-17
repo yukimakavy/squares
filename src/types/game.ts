@@ -89,7 +89,7 @@ export const SLOT_OPTIONS: SlotOption[] = [
 export const GRID_SIZE = 12;
 export const TOTAL_SQUARES = GRID_SIZE * GRID_SIZE;
 export const FILL_TIME = 1000; // 1 second per square
-export const SPIN_DURATION = 1000; // 1 second for slot machine spin
+export const SPIN_DURATION = 300; // 0.3 seconds for slot machine spin
 export const LAYER_TIME_MULTIPLIER = 200; // Each layer's squares take 200x longer than the previous layer's last square
 export const PASSIVE_GENERATION_RATE = 0.01; // 1% per second passive generation for completed layers
 
@@ -119,6 +119,7 @@ export interface UpgradeConfig {
   baseCost: number;
   costMultiplier: number; // Cost multiplier per level
   maxLevel?: number;
+  costCurrency?: 'blue' | 'pink'; // Currency type (defaults to 'blue' if not specified)
   getEffect: (level: number) => number; // Calculate effect for given level
   formatEffect: (level: number) => string; // Format effect for display
   unlockRequirement?: {
