@@ -91,7 +91,7 @@ function App() {
                 </div>
 
                 {/* Mobile layout - vertical stack */}
-                <div className="md:hidden flex flex-col gap-3 w-full">
+                <div className="md:hidden flex flex-col gap-3">
                   {hasManaGem && <Spells />}
 
                   <Grid />
