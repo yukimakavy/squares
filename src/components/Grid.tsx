@@ -35,9 +35,9 @@ export default function Grid() {
           Loading layer...
         </div>
       ) : (
-        <div className="flex gap-2 w-full md:w-auto" style={{ height: '428px' }}>
+        <div className="flex gap-2" style={{ height: '428px' }}>
           {/* Grid with rows */}
-          <div className="flex flex-col gap-1 flex-1 md:flex-initial">
+          <div className="flex flex-col gap-1">
             {rows.map(({ rowSquares, rowNumber }) => (
               <div key={rowNumber} className="flex gap-1">
                 {rowSquares.map((square) => (
