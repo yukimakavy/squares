@@ -1,23 +1,11 @@
 import useGameStore from '../stores/gameStore';
+import { prepareSaveData } from '../utils/saveData';
 
 export default function ExportButton() {
   const handleExport = () => {
     const state = useGameStore.getState();
     const saveData = {
-      layer: state.layer,
-      prestigeLevel: state.prestigeLevel,
-      currency: state.currency,
-      mana: state.mana,
-      upgrades: state.upgrades,
-      unlockedUpgrades: state.unlockedUpgrades,
-      hasCollected: state.hasCollected,
-      spells: state.spells,
-      lastUpdate: state.lastUpdate,
-      prestigeCurrencies: state.prestigeCurrencies,
-      currentTab: state.currentTab,
-      skillsUnlocked: state.skillsUnlocked,
-      lastBlueSquareProduction: state.lastBlueSquareProduction,
-      skills: state.skills,
+      ...prepareSaveData(state),
       timestamp: Date.now(),
     };
 

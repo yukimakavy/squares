@@ -3,6 +3,7 @@ import ComboSquare from './ComboSquare';
 import ShopItem from './ShopItem';
 import { COMBO_PAYOUTS } from '../types/game';
 import { COMBO_UPGRADES } from '../config/upgrades';
+import { calculateComboType } from '../utils/combos';
 
 export default function Combos() {
   const comboSquares = useGameStore((state) => state.comboSquares);
@@ -13,32 +14,8 @@ export default function Combos() {
   const setHideMaxedUpgrades = useGameStore((state) => state.setHideMaxedUpgrades);
   useGameStore((state) => state.upgrades); // Subscribe to upgrades array for reactivity
 
-  // Calculate current hand type from filled squares
-  const getCurrentHandType = () => {
-    const filledSquares = comboSquares.filter(s => s.filled);
-    if (filledSquares.length === 0) return null;
-
-    const colors = filledSquares.map(s => s.color).filter(c => c !== null);
-    if (colors.length === 0) return null;
-
-    const colorCounts = colors.reduce((acc, color) => {
-      acc[color!] = (acc[color!] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const counts = Object.values(colorCounts).sort((a, b) => b - a);
-
-    // Determine best possible hand with current cards
-    if (counts[0] === 5) return 'five_of_a_kind';
-    if (counts[0] === 4) return 'four_of_a_kind';
-    if (counts[0] === 3 && counts[1] === 2) return 'full_house';
-    if (counts[0] === 3) return 'three_of_a_kind';
-    if (counts[0] === 2 && counts[1] === 2) return 'two_pair';
-    if (counts[0] === 2) return 'one_pair';
-    return 'nothing';
-  };
-
-  const currentHandType = getCurrentHandType();
+  // Calculate current hand type using centralized utility
+  const currentHandType = calculateComboType(comboSquares);
 
   // Filter out maxed upgrades if hideMaxedUpgrades is enabled
   const comboUpgrades = hideMaxedUpgrades

@@ -6,6 +6,8 @@ import { UPGRADES, PINK_UPGRADES, COMBO_UPGRADES, getUpgradeCost } from '../conf
 import { SPELLS, getSpellCost } from '../config/spells';
 import { SKILLS } from '../config/skills';
 import { loadGameState } from '../utils/storage';
+import { calculateComboType as utilCalculateComboType } from '../utils/combos';
+import { applyUpgradeMultiplier } from '../utils/upgrades';
 
 // Initialize grid squares (bottom-left to top-right, row by row)
 const initializeSquares = (): SquareState[] => {
@@ -60,25 +62,9 @@ const getRandomComboColor = (): ComboColor => {
   return COMBO_COLORS[Math.floor(Math.random() * COMBO_COLORS.length)];
 };
 
-// Calculate combo type from filled squares
+// Use the centralized combo type calculation
 const calculateComboType = (squares: ComboSquare[]): ComboType => {
-  const colors = squares.map(s => s.color).filter(c => c !== null) as ComboColor[];
-  if (colors.length !== COMBO_SQUARE_COUNT) return 'nothing';
-
-  const colorCounts = colors.reduce((acc, color) => {
-    acc[color] = (acc[color] || 0) + 1;
-    return acc;
-  }, {} as Record<ComboColor, number>);
-
-  const counts = Object.values(colorCounts).sort((a, b) => b - a);
-
-  if (counts[0] === 5) return 'five_of_a_kind';
-  if (counts[0] === 4) return 'four_of_a_kind';
-  if (counts[0] === 3 && counts[1] === 2) return 'full_house';
-  if (counts[0] === 3) return 'three_of_a_kind';
-  if (counts[0] === 2 && counts[1] === 2) return 'two_pair';
-  if (counts[0] === 2) return 'one_pair';
-  return 'nothing';
+  return utilCalculateComboType(squares) || 'nothing';
 };
 
 // Calculate fill time for a specific square based on prestige level
@@ -800,65 +786,32 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
   },
 
   getFillSpeedMultiplier: () => {
-    const fillFasterLevel = get().getUpgradeLevel('fill_faster');
-    const upgrade = UPGRADES.find(u => u.id === 'fill_faster');
-
     let multiplier = 1;
-    if (upgrade && fillFasterLevel > 0) {
-      multiplier *= upgrade.getEffect(fillFasterLevel);
-    }
 
-    // Apply fill_rate upgrade from pink upgrades
-    const fillRateLevel = get().getUpgradeLevel('fill_rate');
-    const fillRateUpgrade = PINK_UPGRADES.find(u => u.id === 'fill_rate');
-    if (fillRateUpgrade && fillRateLevel > 0) {
-      multiplier *= fillRateUpgrade.getEffect(fillRateLevel);
-    }
-
-    // Apply faster_combo_fill upgrade from combo upgrades
-    const fasterComboFillLevel = get().getUpgradeLevel('faster_combo_fill');
-    const fasterComboFillUpgrade = COMBO_UPGRADES.find(u => u.id === 'faster_combo_fill');
-    if (fasterComboFillUpgrade && fasterComboFillLevel > 0) {
-      multiplier *= fasterComboFillUpgrade.getEffect(fasterComboFillLevel);
-    }
+    // Apply all fill speed upgrades
+    multiplier = applyUpgradeMultiplier(UPGRADES, 'fill_faster', get().getUpgradeLevel('fill_faster'), multiplier);
+    multiplier = applyUpgradeMultiplier(PINK_UPGRADES, 'fill_rate', get().getUpgradeLevel('fill_rate'), multiplier);
+    multiplier = applyUpgradeMultiplier(COMBO_UPGRADES, 'faster_combo_fill', get().getUpgradeLevel('faster_combo_fill'), multiplier);
 
     return multiplier;
   },
 
   getManaPerSecond: () => {
+    // Base mana generation from Mana Gem
     const manaGemLevel = get().getUpgradeLevel('mana_gem');
     const upgrade = UPGRADES.find(u => u.id === 'mana_gem');
+    const baseRate = (upgrade && manaGemLevel > 0) ? upgrade.getEffect(manaGemLevel) : 0;
 
-    let baseRate = 0;
-    if (upgrade && manaGemLevel > 0) {
-      baseRate = upgrade.getEffect(manaGemLevel);
-    }
-
-    // Apply mana_boost upgrade from pink upgrades
+    // Apply multiplier upgrades
     let multiplier = 1;
-    const manaBoostLevel = get().getUpgradeLevel('mana_boost');
-    const manaBoostUpgrade = PINK_UPGRADES.find(u => u.id === 'mana_boost');
-    if (manaBoostUpgrade && manaBoostLevel > 0) {
-      multiplier *= manaBoostUpgrade.getEffect(manaBoostLevel);
-    }
-
-    // Apply faster_combo_mana upgrade from combo upgrades
-    const fasterComboManaLevel = get().getUpgradeLevel('faster_combo_mana');
-    const fasterComboManaUpgrade = COMBO_UPGRADES.find(u => u.id === 'faster_combo_mana');
-    if (fasterComboManaUpgrade && fasterComboManaLevel > 0) {
-      multiplier *= fasterComboManaUpgrade.getEffect(fasterComboManaLevel);
-    }
+    multiplier = applyUpgradeMultiplier(PINK_UPGRADES, 'mana_boost', get().getUpgradeLevel('mana_boost'), multiplier);
+    multiplier = applyUpgradeMultiplier(COMBO_UPGRADES, 'faster_combo_mana', get().getUpgradeLevel('faster_combo_mana'), multiplier);
 
     return baseRate * multiplier;
   },
 
   getPinkMultiplier: () => {
-    const pinkMultiplierLevel = get().getUpgradeLevel('pink_multiplier');
-    const upgrade = UPGRADES.find(u => u.id === 'pink_multiplier');
-
-    if (!upgrade || pinkMultiplierLevel === 0) return 1;
-
-    return upgrade.getEffect(pinkMultiplierLevel);
+    return applyUpgradeMultiplier(UPGRADES, 'pink_multiplier', get().getUpgradeLevel('pink_multiplier'), 1);
   },
 
   castSpell: (spellId: string) => {
