@@ -27,6 +27,14 @@ export default function ChangelogButton() {
 
             <div className="space-y-4">
               <div>
+                <h3 className="text-lg font-semibold text-blue-400 mb-2">V1.2</h3>
+                <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside">
+                  <li>Added Combos</li>
+                  <li>Endgame now is full pink grid</li>
+                </ul>
+              </div>
+
+              <div>
                 <h3 className="text-lg font-semibold text-blue-400 mb-2">V1.1</h3>
                 <ul className="text-sm text-gray-300 space-y-1 list-disc list-inside">
                   <li>Added QOL indicators that show how lucky or unlucky your total multi is</li>
