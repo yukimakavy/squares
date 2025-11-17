@@ -29,7 +29,7 @@ function App() {
       <div className="flex flex-col h-full">
         {/* Game area centered */}
         <div className="flex-1 flex items-start md:items-center justify-center p-2 md:p-4 overflow-y-auto overflow-x-hidden" style={{ WebkitOverflowScrolling: 'touch' }}>
-          <div className="flex flex-col gap-2 w-full md:w-auto max-w-full pb-20 md:pb-4">
+          <div className="flex flex-col gap-2 pb-20 md:pb-4">
             {/* Currency at top left of game area */}
             <div className="self-start overflow-x-auto w-full">
               <CurrencyDisplay />
