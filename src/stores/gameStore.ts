@@ -345,7 +345,37 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
     // This is the value that would have been collected from the blue grid
     let blueSquareProduction = 0;
     if (state.prestigeLevel === 0) {
-      const finalMultiplier = get().getTotalMultiplier();
+      // Force-complete any spinning slot animations before calculating multiplier
+      const spinningBonuses = completedLayer.rowBonuses.filter(b => b.isSpinning);
+      let finalMultiplier: number;
+
+      if (spinningBonuses.length > 0) {
+        // Force complete animations by rolling multipliers
+        const updatedBonuses = completedLayer.rowBonuses.map(bonus => {
+          if (bonus.isSpinning) {
+            return {
+              ...bonus,
+              multiplier: getRandomSlotMultiplier(),
+              isSpinning: false,
+            };
+          }
+          return bonus;
+        });
+
+        // Calculate multiplier from updated bonuses
+        finalMultiplier = updatedBonuses.reduce((total, bonus) => {
+          if (bonus.multiplier !== null) {
+            return total * bonus.multiplier;
+          }
+          return total;
+        }, 1);
+
+        // Update the completed layer with finalized bonuses for the animation
+        completedLayer.rowBonuses = updatedBonuses;
+      } else {
+        finalMultiplier = get().getTotalMultiplier();
+      }
+
       blueSquareProduction = completedLayer.totalSquares * finalMultiplier;
     }
 
