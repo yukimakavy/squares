@@ -639,10 +639,18 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
 
     // Handle Magical Collect spell
     if (spellId === 'magical_collect') {
-      const layer = state.layer;
-      const multiplier = get().getTotalMultiplier();
-      const filledSquares = layer.squares.filter(s => s.filled).length;
-      const reward = filledSquares * multiplier;
+      let reward = 0;
+
+      if (state.prestigeLevel === 0) {
+        // On blue grid: collect filled squares × current multiplier
+        const layer = state.layer;
+        const multiplier = get().getTotalMultiplier();
+        const filledSquares = layer.squares.filter(s => s.filled).length;
+        reward = filledSquares * multiplier;
+      } else {
+        // On pink grid: use the stored blue square production value
+        reward = state.lastBlueSquareProduction;
+      }
 
       // Magical Collect always gives blue squares, even on pink grid
       set({
