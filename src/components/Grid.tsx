@@ -25,7 +25,7 @@ export default function Grid() {
   }, [squares]);
 
   return (
-    <div className="relative w-full md:w-auto md:inline-block">
+    <div className="relative inline-block">
       {/* Layer transition animation */}
       <LayerTransition />
 
