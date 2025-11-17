@@ -35,9 +35,9 @@ function App() {
               <CurrencyDisplay />
             </div>
 
-            {/* Tab selector - left aligned with containers */}
+            {/* Tab selector - sticky on mobile, left aligned on desktop */}
             {skillsUnlocked && (
-              <div className="self-start">
+              <div className="sticky top-0 z-10 bg-gray-900 py-2 -mt-2 self-start w-full md:static md:py-0 md:mt-0 md:w-auto md:bg-transparent">
                 <TabSelector />
               </div>
             )}
@@ -94,9 +94,9 @@ function App() {
                 <div className="md:hidden flex flex-col gap-2">
                   {hasManaGem && <Spells />}
 
-                  <div className="flex flex-col gap-1">
+                  <div className="flex flex-col">
                     <Grid />
-                    <div className="flex gap-2 items-end" style={{ transform: 'scale(0.72)', transformOrigin: 'top left', width: 'calc(100% / 0.72)' }}>
+                    <div className="flex gap-2 items-end -mt-24" style={{ transform: 'scale(0.72)', transformOrigin: 'top left', width: 'calc(100% / 0.72)' }}>
                       <CollectButton />
                       <MultiDisplay />
                     </div>
