@@ -641,7 +641,8 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
     if (spellId === 'magical_collect') {
       const layer = state.layer;
       const multiplier = get().getTotalMultiplier();
-      const reward = layer.totalSquares * multiplier;
+      const filledSquares = layer.squares.filter(s => s.filled).length;
+      const reward = filledSquares * multiplier;
 
       // Magical Collect always gives blue squares, even on pink grid
       set({
