@@ -33,6 +33,11 @@ export default function ChangelogButton() {
                   <li>Fixed bug that made unfinished multi animations not count for passive blue generation when you fill the grid</li>
                   <li>Increased passive blue generation from 5% to 10%</li>
                   <li>Updated Magical Collect description to clarify it only collects blue squares, not pink</li>
+                  <li>Moved skills to be a pink square shop</li>
+                  <li>Skills now have a max level</li>
+                  <li>Rebalanced pink grid</li>
+                  <li>Current endgame - ~1m pink squares. You can technically finish the pink grid if you are patient but there is content for filling the pink grid</li>
+                  <li>Slightly improved mobile browser layout</li>
                 </ul>
               </div>
 

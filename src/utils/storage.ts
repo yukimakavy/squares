@@ -55,6 +55,42 @@ export function loadGameState(): Partial<GameState> | null {
       return null;
     }
 
+    // V1.0 -> V1.1 Migration: Refund pink squares spent on old skills
+    let migratedPrestigeCurrencies = data.prestigeCurrencies ?? [];
+    let migratedSkills = data.skills ?? [];
+
+    if (data.skills && data.skills.length > 0) {
+      // Define the old skill costs (from v1.0)
+      const skillCosts: Record<string, number> = {
+        'passive_generation': 1,
+        'mana_boost_1': 2,
+        'mana_boost_2': 20,
+        'mana_boost_3': 100,
+        'fill_rate_1': 2,
+        'fill_rate_2': 100,
+        'fill_rate_3': 5000,
+      };
+
+      // Calculate total refund for purchased skills
+      let totalRefund = 0;
+      for (const skill of data.skills) {
+        if (skill.purchased && skillCosts[skill.id]) {
+          totalRefund += skillCosts[skill.id];
+          console.log(`[Migration] Refunding ${skillCosts[skill.id]} pink squares for skill ${skill.id}`);
+        }
+      }
+
+      if (totalRefund > 0) {
+        // Add refund to pink squares (prestigeCurrencies[0])
+        migratedPrestigeCurrencies = [...migratedPrestigeCurrencies];
+        migratedPrestigeCurrencies[0] = (migratedPrestigeCurrencies[0] || 0) + totalRefund;
+        console.log(`[Migration] Total refund: ${totalRefund} pink squares. New total: ${migratedPrestigeCurrencies[0]}`);
+
+        // Clear old skills
+        migratedSkills = [];
+      }
+    }
+
     const result = {
       layer: data.layer,
       prestigeLevel: data.prestigeLevel ?? 0,
@@ -65,11 +101,11 @@ export function loadGameState(): Partial<GameState> | null {
       hasCollected: data.hasCollected ?? false,
       spells: data.spells ?? [],
       lastUpdate: data.lastUpdate,
-      prestigeCurrencies: data.prestigeCurrencies ?? [],
+      prestigeCurrencies: migratedPrestigeCurrencies,
       currentTab: data.currentTab ?? 'squares',
       skillsUnlocked: data.skillsUnlocked ?? false,
       lastBlueSquareProduction: data.lastBlueSquareProduction ?? 0,
-      skills: data.skills ?? [],
+      skills: migratedSkills,
     };
     console.log('[loadGameState] Returning data - prestigeLevel:', result.prestigeLevel, 'currency:', result.currency);
     return result;
