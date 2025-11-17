@@ -91,14 +91,15 @@ function App() {
                 </div>
 
                 {/* Mobile layout - vertical stack */}
-                <div className="md:hidden flex flex-col gap-3">
+                <div className="md:hidden flex flex-col gap-2">
                   {hasManaGem && <Spells />}
 
-                  <Grid />
-
-                  <div className="flex gap-2 justify-center">
-                    <CollectButton />
-                    <MultiDisplay />
+                  <div className="flex flex-col gap-1">
+                    <Grid />
+                    <div className="flex gap-2 items-end" style={{ transform: 'scale(0.72)', transformOrigin: 'top left', width: 'calc(100% / 0.72)' }}>
+                      <CollectButton />
+                      <MultiDisplay />
+                    </div>
                   </div>
 
                   {hasCollected && <Shop />}
