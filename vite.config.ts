@@ -5,4 +5,8 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './', // Use relative paths for standalone deployment
+  server: {
+    port: 3000,
+    strictPort: true, // Fail if port 3000 is already in use
+  },
 })

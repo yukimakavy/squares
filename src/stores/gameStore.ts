@@ -499,7 +499,9 @@ const useGameStore = create<GameState & GameActions>((set, get) => {
           prestigeCurrencies: updatedPrestigeCurrencies,
           skillsUnlocked: unlockSkills ? true : state.skillsUnlocked,
           currency: 0, // Reset blue squares to 0
+          mana: 0, // Reset mana to 0
           upgrades: [], // Reset all upgrades
+          spells: [], // Reset all spells
           lastBlueSquareProduction: 0, // Clear stored production on full reset
           lastUpdate: Date.now(),
         };

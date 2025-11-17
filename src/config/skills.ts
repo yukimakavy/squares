@@ -5,12 +5,12 @@ export const SKILLS: SkillConfig[] = [
   {
     id: 'passive_generation',
     name: 'Passive Generation',
-    description: 'Generate 5% of blue squares per second passively',
+    description: 'Generate 10% of blue squares per second passively',
     cost: 1,
     costCurrency: 'pink',
     effect: {
       type: 'passive_generation',
-      value: 0.05, // 5% per second
+      value: 0.10, // 10% per second
     },
   },
 

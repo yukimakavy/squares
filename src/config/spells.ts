@@ -17,7 +17,7 @@ export const SPELLS: SpellConfig[] = [
     id: 'magical_collect',
     name: 'Magical Collect',
     icon: '✨',
-    description: 'Collect the grid without resetting it',
+    description: 'Collect blue squares without resetting',
     baseCost: 50,
     costMultiplier: 2,
     effect: () => {

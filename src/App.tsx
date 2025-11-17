@@ -7,6 +7,7 @@ import Spells from './components/Spells';
 import ResetButton from './components/ResetButton';
 import ExportButton from './components/ExportButton';
 import ImportButton from './components/ImportButton';
+import ChangelogButton from './components/ChangelogButton';
 import TabSelector from './components/TabSelector';
 import SkillTree from './components/SkillTree';
 import { useGameLoop } from './hooks/useGameLoop';
@@ -111,6 +112,7 @@ function App() {
 
             {/* Save controls - inline at bottom on mobile, floating on desktop */}
             <div className="flex gap-2 justify-center md:hidden mt-4">
+              <ChangelogButton />
               <ExportButton />
               <ImportButton />
               <ResetButton />
@@ -122,6 +124,7 @@ function App() {
       {/* Save controls - bottom right on desktop only */}
       <div className="hidden md:block fixed bottom-4 right-4">
         <div className="flex gap-2">
+          <ChangelogButton />
           <ExportButton />
           <ImportButton />
           <ResetButton />
