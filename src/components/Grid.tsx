@@ -25,7 +25,7 @@ export default function Grid() {
   }, [squares]);
 
   return (
-    <div className="relative w-full overflow-x-auto md:inline-block md:w-auto md:overflow-visible">
+    <div className="relative scale-[0.85] origin-top-left md:scale-100 md:inline-block">
       {/* Layer transition animation */}
       <LayerTransition />
 
